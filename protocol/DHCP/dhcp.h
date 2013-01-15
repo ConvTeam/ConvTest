@@ -8,8 +8,8 @@
 #define DHCP_STATE_SEARCHING	1
 #define DHCP_STATE_SELECTING	2
 #define DHCP_STATE_REQUESTING	3
-#define DHCP_STATE_IP_CHECK		4
-#define DHCP_STATE_BOUND		5
+#define DHCP_STATE_BOUND		7
+#define DHCP_STATE_IP_CHECK		6
 
 
 int8 dhcp_init(SOCKET sock, pFunc ip_update, pFunc ip_conflict, uint8 *my_mac);

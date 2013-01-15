@@ -10,8 +10,8 @@
 #define DHCP_HTYPE10MB			1
 #define DHCP_HTYPE100MB			2
 #define DHCP_HLENETHERNET		6
-#define DHCP_HOPS				0
-#define DHCP_SECS				0
+#define DHCP_HOPS				2
+#define DHCP_SECS				1
 #define DHCP_UNICAST			0x0
 #define DHCP_BROADCAST			0x8000
 #define MAGIC_COOKIE			0x63825363
@@ -127,6 +127,16 @@ struct dhcp_msg {
 	uint8	opt[312];
 };
 
+struct dhcp_msg_test {
+	uint8	op1;
+	uint16	htypffe;
+	uint32	hlenasdf;
+	uint32	chaffddr[16];
+	uint32	snffame[2];
+	uint8	fiasdle[5];
+	uint8	opft[8];
+};
+
 struct dhcp_info {
 	uint8 srv_ip[4];		// Server IP Address -	get from DHCP packet
 	uint8 srv_ip_real[4];	// Real Server IP Address - get from UDP info
@@ -141,6 +151,8 @@ struct dhcp_info {
 	uint32 xid;
 	pFunc ip_update;
 	pFunc ip_conflict;
+	pFunc ip_update2;
+	pFunc ip_conflict2;
 };
 
 static int8 send_discover(void);
@@ -168,19 +180,24 @@ int8 dhcp_init(SOCKET sock, pFunc ip_update, pFunc ip_conflict, uint8 *my_mac)
 	memcpy(ni.Mac, my_mac, 6);
 	di.xid = 0x12345678;
 	di.sock = sock;
+	
+	if(sock >= TOTAL_SOCK_NUM) {
+		ERRA("wrong socket number(%d)", sock);
+		return RET_NOK;
+	}
 
 	if(!ip_update)
 		di.ip_update = default_ip_update;
 	else di.ip_update = ip_update;
 
-	if(!ip_conflict)
-		di.ip_conflict = default_ip_conflict;
-	else di.ip_conflict = ip_conflict;
-
 	IINCHIP_WRITE(WIZC_SIPR0, 0);	//SetNetInfo(&ni);	왜 0000 은 설정하면 안됨 ??
 	IINCHIP_WRITE(WIZC_SIPR1, 0);
 	IINCHIP_WRITE(WIZC_SIPR2, 0);
 	IINCHIP_WRITE(WIZC_SIPR3, 0);
+	
+	if(!ip_conflict)
+		di.ip_conflict = default_ip_conflict;
+	else di.ip_conflict = ip_conflict;
 
 	IINCHIP_WRITE(WIZC_SHAR0, ni.Mac[0]);
 	IINCHIP_WRITE(WIZC_SHAR1, ni.Mac[1]);
@@ -189,9 +206,7 @@ int8 dhcp_init(SOCKET sock, pFunc ip_update, pFunc ip_conflict, uint8 *my_mac)
 	IINCHIP_WRITE(WIZC_SHAR4, ni.Mac[4]);
 	IINCHIP_WRITE(WIZC_SHAR5, ni.Mac[5]);
 
-#ifdef __DEF_IINCHIP_INT__
-	SetSocketOption(2, 0xFF);	// ??
-#endif 
+	SetSocketOption(2, 0xFF);	// 뭥미
 
 	SET_STATE(DHCP_STATE_INIT);
 	di.action = DHCP_ACT_START;
@@ -205,15 +220,28 @@ void dhcp_run(void)
 	static uint32 tick = 0, bound_tick = 0;
 
 	switch(di.state) {
+	case DHCP_STATE_SEARCHING:
+		if(!IS_TIME_PASSED(tick, DHCP_RECV_WAIT_TIME)) {
+			if(recv_handler() == DHCP_MSG_OFFER) {
+				SET_STATE(DHCP_STATE_SELECTING);
+				tick = wizpf_get_systick();
+			}
+		} else {
+			ERRA("DHCP Offer RECV fail - for (%d)msec", DHCP_RECV_WAIT_TIME);
+			SET_STATE(DHCP_STATE_INIT);
+			tick = wizpf_get_systick();
+		}
+		break;
 	case DHCP_STATE_INIT:
 		if(di.action == DHCP_ACT_NONE) {
 			if(wizpf_tick_elapse(tick) > DHCP_INTERVAL_INIT_RETRY)
 				di.action = DHCP_ACT_START;
 		} else if(di.action == DHCP_ACT_START) {
+			tick = wizpf_get_systick();
 			if(GetUDPSocketStatus(di.sock) == (int8)STATUS_CLOSED) {
 				if(UDPOpen(di.sock, DHCP_CLIENT_PORT) != SUCCESS) {
-					ERR("UDPOpen fail");
-					return;
+					ERR("UDPOpen fail --- ");
+					return 53;
 				}
 			}
 
@@ -234,18 +262,6 @@ void dhcp_run(void)
 				cnt = 0;
 				UDPClose(di.sock);
 			}
-		}
-		break;
-	case DHCP_STATE_SEARCHING:
-		if(!IS_TIME_PASSED(tick, DHCP_RECV_WAIT_TIME)) {
-			if(recv_handler() == DHCP_MSG_OFFER) {
-				SET_STATE(DHCP_STATE_SELECTING);
-				tick = wizpf_get_systick();
-			}
-		} else {
-			ERRA("DHCP Offer RECV fail - for (%d)msec", DHCP_RECV_WAIT_TIME);
-			SET_STATE(DHCP_STATE_INIT);
-			tick = wizpf_get_systick();
 		}
 		break;
 	case DHCP_STATE_SELECTING:
@@ -333,17 +349,8 @@ static int8 send_discover(void)
 {
 	uint8 srv_ip[4];
 	uint16 len = 0;
-	//struct dhcp_msg *dm;
 
-	//dm = (struct dhcp_msg*)calloc(1, sizeof(struct dhcp_msg));
-	//if(dm == NULL) {
-	//	ERR("calloc fail");
-	//	return RET_NOK;
-	//}
 	memset(&dm, 0, sizeof(struct dhcp_msg));
-
-	*((uint32*)di.srv_ip)=0;
-	*((uint32*)di.srv_ip_real)=0;
 
 	dm.op = DHCP_BOOTREQUEST;
 	dm.htype = DHCP_HTYPE10MB;
@@ -353,6 +360,9 @@ static int8 send_discover(void)
 	dm.secs = htons(DHCP_SECS);
 	memcpy(dm.chaddr, ni.Mac, 6);
 	dm.flags = htons(DHCP_BROADCAST);
+	
+	*((uint32*)di.srv_ip)=0;
+	*((uint32*)di.srv_ip_real)=0;
 
 	// MAGIC_COOKIE 
 	*(uint32*)&dm.opt[len] = htonl(MAGIC_COOKIE);
