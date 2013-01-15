@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DemandResponseProgramList xmlns="http://zigbee.org/sep" all="1" results="1">
+	<DemandResponseProgram href="/dr/0">
+		<mRID>0000000000000000</mRID>
+		<description>DR Server</description>
+		<ActiveEndDeviceControlListLink href="/dr/0/aedc" all="0" />
+		<EndDeviceControlListLink href="/dr/0/edc" all="0" />
+		<primacy>0</primacy>
+	</DemandResponseProgram>
+</DemandResponseProgramList>
