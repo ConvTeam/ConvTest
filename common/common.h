@@ -1,4 +1,3 @@
-
 #ifndef _COMMON_H
 #define _COMMON_H
 
@@ -8,7 +7,7 @@
 //-------------------------------------- Compiler Definition --------------------------------------
 #ifdef COMPILER_IAR_EWARM
 #ifndef COMPILER_DEF_DONE
-#define COMPILER_DEF_DONE
+#define COMPILER_DEF_DONE_DDD
 #else
 #error Duplicate definition of COMPILER
 #endif
