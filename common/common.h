@@ -1,4 +1,3 @@
-
 #ifndef _COMMON_H
 #define _COMMON_H
 
@@ -6,7 +5,7 @@
 #include "common/types.h"
 
 //-------------------------------------- Compiler Definition --------------------------------------
-#ifdef COMPILER_IAR_EWARM
+#ifdef COMPILER_IAR_EWARM_TEST
 #ifndef COMPILER_DEF_DONE
 #define COMPILER_DEF_DONE
 #else
