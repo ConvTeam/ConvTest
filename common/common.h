@@ -19,7 +19,7 @@
 //------------------------------------------
 #ifdef COMPILER_GCC_ARM_ABC
 #ifndef COMPILER_DEF_DONE
-#define COMPILER_DEF_DONE
+#define COMPILER_DEF_DONE_b
 #else
 #error Duplicate definition of COMPILER
 #endif
