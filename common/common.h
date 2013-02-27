@@ -17,7 +17,7 @@
 #endif
 
 //------------------------------------------
-#ifdef COMPILER_GCC_ARM_ABC
+#ifdef COMPILER_GCC_ARM_DEF
 #ifndef COMPILER_DEF_DONE
 #define COMPILER_DEF_DONE
 #else
