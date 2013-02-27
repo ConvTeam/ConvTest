@@ -7,7 +7,7 @@
 //-------------------------------------- Compiler Definition --------------------------------------
 #ifdef COMPILER_IAR_EWARM_TEST
 #ifndef COMPILER_DEF_DONE
-#define COMPILER_DEF_DONE
+#define COMPILER_DEF_DONE_DDD
 #else
 #error Duplicate definition of COMPILER
 #endif
